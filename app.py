@@ -3,7 +3,7 @@ import os
 import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
-from config.db_config import init_db
+from tortoise.contrib.fastapi import register_tortoise
 from exception.all_exception import global_exception_handlers
 from web.user_web import user
 
@@ -26,9 +26,34 @@ def create_app():
     # 添加路由
     _app.include_router(router=user, prefix="/v1/user", tags=["user"])
 
+    # SQLite 数据源路径
+    sqlite_db_path = "./db/app.db"  # 替换为你的 SQLite 数据库路径
+
+    # 注册 SQLite 数据源
+    register_tortoise(
+        _app,
+        db_url=f"sqlite://{sqlite_db_path}",
+        modules={'models': ['entity.database.sqlite']},  # 替换成你定义的模型路径
+        generate_schemas=True,  # 若首次初始化需要建表可打开
+        add_exception_handlers=True,
+    )
+
     @_app.on_event("startup")
     async def app_startup():
-        await init_db()
+        os.makedirs("logs", exist_ok=True)
+
+        # 清除旧的 handler，防止重复添加
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            handlers=[
+                logging.FileHandler("logs/app.log", mode='a', encoding='utf-8'),
+                logging.StreamHandler()
+            ]
+        )
         logging.info("fastapi run------------------ Starting")
 
     @_app.on_event("shutdown")
