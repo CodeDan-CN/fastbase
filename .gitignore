@@ -50,7 +50,7 @@ yarn-error.log*
 
 # IDE配置
 .vscode/
-.idea/
+*.idea/
 *.sublime-workspace
 *.sublime-project
 
@@ -76,7 +76,4 @@ yarn-error.log*
 *.thumbnail
 *.thumb
 *.temp.*
-
-# Git 忽略自身
-.gitignore
 
