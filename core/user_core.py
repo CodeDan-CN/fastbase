@@ -2,7 +2,7 @@ import logging
 from typing import Optional, List
 
 from tortoise.exceptions import DoesNotExist
-from entity.database.sqlite import User
+from entity.database.mysql import User
 from entity.schema.user_schema import UserOut
 
 logger = logging.getLogger(__name__)

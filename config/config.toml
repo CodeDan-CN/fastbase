@@ -1,0 +1,27 @@
+[server]
+port = 6001
+
+[mysql]
+host = "localhost"
+port = 3306
+user = "root"
+password = "Zld19981016.."
+database = "test"
+
+[milvus]
+host = "localhost"
+port = 19530
+user = "root"
+password = ""
+db_name = "default"
+
+
+[llm-default]
+model = "qwen"
+deployment_type= "vllm"
+api_key=""
+base_url="http://10.0.5.73:8000/v1"
+temperature=0.5
+max_token=4096
+
+
