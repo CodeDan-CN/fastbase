@@ -25,3 +25,9 @@ temperature=0.5
 max_token=4096
 
 
+[embedding-model]
+source="ollama"
+ollama_model="bge-large:latest"
+ollama_base_url="http://0.0.0.0:11434"
+hf_model=""
+tei_endpoint=""

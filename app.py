@@ -10,8 +10,10 @@ from config.logging_config import init_daily_logger
 from config.setting import settings
 from exception.all_exception import global_exception_handlers
 from exception.custom_exception import CustomErrorThrowException
+from models.client.embedding_client import EmbeddingClientFactory
 from utils.milvus_client import EmbeddingMilvusClient
 from models.client.llm_client import LLMClient
+from web.demo_web import demo
 from web.user_web import user
 
 def create_app():
@@ -31,7 +33,7 @@ def create_app():
 
     # 添加路由
     _app.include_router(router=user, prefix="/v1/user", tags=["user"])
-
+    _app.include_router(router=demo, prefix="/v1/demo", tags=["demo"])
 
     # 假设你用 pymysql 作为驱动
     register_tortoise(
@@ -47,7 +49,7 @@ def create_app():
     async def app_startup():
         try:
             init_daily_logger()
-            logging.info("初始化大模型")
+            logging.info("初始化大模型LLM")
             LLMClient.init({
                 "model": settings.llm_default["model"],
                 "deployment_type": settings.llm_default["deployment_type"],
@@ -62,6 +64,14 @@ def create_app():
                 "user": settings.milvus["user"],
                 "password": settings.milvus["password"],
                 "db_name": settings.milvus["db_name"],
+            })
+            logging.info("初始化embedding模型")
+            EmbeddingClientFactory.init(**{
+                "source": settings.embedding_model["source"],
+                "ollama_model": settings.embedding_model["ollama_model"],
+                "ollama_base_url": settings.embedding_model["ollama_base_url"],
+                "hf_model": settings.embedding_model["hf_model"],
+                "tei_endpoint": settings.embedding_model["tei_endpoint"],
             })
             logging.info("fastapi run------------------ Starting")
         except Exception:

@@ -1,8 +1,8 @@
 import logging
 from typing import Literal, Optional, Dict
 
-from langchain.embeddings import OllamaEmbeddings, HuggingFaceEmbeddings
-from langchain_community.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_ollama import OllamaEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings,HuggingFaceEmbeddings
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class EmbeddingClientFactory:
             一个符合 LangChain Embeddings 接口的实例
         """
         if source is None:
-            source = cls._ollama_model
+            source = cls._source
         if source == "ollama":
             if not cls._ollama_model:
                 raise ValueError("Ollama 模型未配置")
