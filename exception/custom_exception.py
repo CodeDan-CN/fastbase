@@ -1,4 +1,8 @@
+from typing import Union
+
 from fastapi import HTTPException
+
+from exception.error_codes import ErrorCode
 
 
 class BaseAPIException(HTTPException):
@@ -11,11 +15,15 @@ class BaseAPIException(HTTPException):
 
 
 class CustomErrorThrowException(BaseAPIException):
-    """ 自定义异常 """
-    status_code = None
-    detail = None
+    """
+    自定义业务异常，可传入 ErrorCode 枚举或自定义 message。
+    """
+    def __init__(self, error: Union[ErrorCode, str], status_code: int = None):
+        if isinstance(error, ErrorCode):
+            detail = error.message
+            status_code = status_code or error.code
+        else:
+            detail = str(error)
+            status_code = status_code or 400
 
-    def __init__(self, status_code: int, detail: str):
-        self.status_code = status_code
-        self.detail = detail
-        super().__init__(status_code=status_code, detail=detail)
+        super().__init__(detail=detail, status_code=status_code)

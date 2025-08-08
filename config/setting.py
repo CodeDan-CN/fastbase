@@ -15,6 +15,7 @@ class Settings:
         self.milvus = config_data.get("milvus", {})
         self.app = config_data.get("app", {})
         self.llm_default = config_data.get("llm-default", {})
+        self.jwt = config_data.get("jwt", {})
 
 # 全局唯一配置实例
 settings = Settings()

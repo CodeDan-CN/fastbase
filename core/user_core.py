@@ -1,80 +1,55 @@
 import logging
-from typing import Optional, List
-
-from tortoise.exceptions import DoesNotExist
+import traceback
+import uuid
+from datetime import datetime
+from tortoise.exceptions import IntegrityError
+from core.login_core import encrypt_md5
 from entity.database.mysql import User
-from entity.schema.user_schema import UserOut
-
-logger = logging.getLogger(__name__)
-
-
-async def create_user_info(username: str, email: str) -> UserOut:
-    """
-    创建新用户
-    :param username: 用户名
-    :param email: 邮箱地址
-    :return: Pydantic 用户对象
-    """
-    user = await User.create(username=username, email=email)
-    logger.info(f"创建用户成功: {user.username} ({user.id})")
-    return UserOut.from_orm(user)
+from entity.schema.request_schema import UserCreate
+from exception.custom_exception import CustomErrorThrowException
+from exception.error_codes import ErrorCode
 
 
-async def get_user_by_id(user_id: int) -> Optional[UserOut]:
-    """
-    根据用户 ID 获取用户信息
-    :param user_id: 用户 ID
-    :return: Pydantic 用户对象或 None
-    """
+async def add_user_to_database(data: UserCreate):
+    """执行用户插入，需先调用校验函数"""
+
+    await validate_user_create(data)  # 先校验
+    user_id = str(uuid.uuid4())
+    now = datetime.now()
     try:
-        user = await User.get(id=user_id)
-        logger.debug(f"获取用户成功: ID={user_id}")
-        return UserOut.from_orm(user)
-    except DoesNotExist:
-        logger.warning(f"用户不存在: ID={user_id}")
-        return None
+        # 新增数据到数据库表中
+        await User.create(user_id=user_id,name=data.name,username=data.username,password=encrypt_md5(data.password),
+            department=data.department,position=data.position,role_id=data.role_id,status=1,create_time=now,
+            create_by="root",update_by="root",rank=data.rank,expired_date=data.expired_date
+        )
+
+    except IntegrityError as e:
+        raise CustomErrorThrowException(ErrorCode.DB_UNIQUE_CONFLICT)
+
+    except Exception as e:
+        raise CustomErrorThrowException(ErrorCode.USER_CREATE_FAILED)
+
+    logging.info(f"用户添加成功: {data.username}")
+    return data.username
+
+async def validate_user_create(data: UserCreate):
+    """校验用户创建数据，抛出异常则校验失败"""
+
+    if data.rank is not None and len(str(data.rank)) > 6:
+        logging.error("排序字段输入长度超出限制")
+        raise CustomErrorThrowException(ErrorCode.FIELD_RANK_TOO_LONG)
+
+    if len(data.name) > 20:
+        logging.error("姓名字段输入长度超出限制")
+        raise CustomErrorThrowException(ErrorCode.FIELD_NAME_TOO_LONG)
+
+    if len(data.username) > 20:
+        logging.error("用户名字段输入长度超出限制")
+        raise CustomErrorThrowException(ErrorCode.FIELD_USERNAME_TOO_LONG)
+
+    username_count = await User.filter(username=data.username, status=1).count()
+    if username_count > 0:
+        logging.error("用户名重复，请检查")
+        raise CustomErrorThrowException(ErrorCode.USERNAME_DUPLICATE)
 
 
-async def get_user_list() -> List[UserOut]:
-    """
-    获取所有用户列表
-    :return: Pydantic 用户对象列表
-    """
-    users = await User.all()
-    logger.info(f"获取用户列表，共 {len(users)} 个用户")
-    return [UserOut.from_orm(user) for user in users]
-
-
-async def update_user_info(user_id: int, **kwargs) -> Optional[UserOut]:
-    """
-    更新用户信息
-    :param user_id: 用户 ID
-    :param kwargs: 要更新的字段和值
-    :return: 更新后的 Pydantic 用户对象或 None
-    """
-    user = await User.get_or_none(id=user_id)
-    if user:
-        for field, value in kwargs.items():
-            if value is not None:
-                setattr(user, field, value)
-                logger.debug(f"更新字段: {field} -> {value}")
-        await user.save()
-        logger.info(f"用户更新成功: ID={user_id}")
-        return UserOut.from_orm(user)
-    logger.warning(f"更新失败，用户不存在: ID={user_id}")
-    return None
-
-
-async def delete_user_by_id(user_id: int) -> bool:
-    """
-    删除用户
-    :param user_id: 用户 ID
-    :return: 是否删除成功
-    """
-    user = await User.get_or_none(id=user_id)
-    if user:
-        await user.delete()
-        logger.info(f"用户删除成功: ID={user_id}")
-        return True
-    logger.warning(f"删除失败，用户不存在: ID={user_id}")
-    return False

@@ -1,7 +1,6 @@
 import logging
 import os
 import traceback
-
 import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
@@ -10,9 +9,12 @@ from config.logging_config import init_daily_logger
 from config.setting import settings
 from exception.all_exception import global_exception_handlers
 from exception.custom_exception import CustomErrorThrowException
+from exception.error_codes import ErrorCode
 from utils.milvus_client import EmbeddingMilvusClient
 from models.client.llm_client import LLMClient
+from web.login_web import login
 from web.user_web import user
+
 
 def create_app():
     _app = FastAPI(
@@ -30,8 +32,8 @@ def create_app():
     )
 
     # 添加路由
+    _app.include_router(router=login, prefix="/v1/auth", tags=["auth"])
     _app.include_router(router=user, prefix="/v1/user", tags=["user"])
-
 
     # 假设你用 pymysql 作为驱动
     register_tortoise(
@@ -66,7 +68,7 @@ def create_app():
             logging.info("fastapi run------------------ Starting")
         except Exception:
             logging.error(f"startup 阶段初始化失败：{traceback.format_exc()}")
-            raise CustomErrorThrowException(101,f"startup 阶段初始化失败：{traceback.format_exc()}")
+            raise CustomErrorThrowException(ErrorCode.SYSTEM_INIT_ERROR)
 
     @_app.on_event("shutdown")
     async def shutdown_event():

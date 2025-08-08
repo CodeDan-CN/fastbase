@@ -1,41 +1,36 @@
-from fastapi import APIRouter
-from core.user_core import create_user_info, get_user_by_id, get_user_list, update_user_info, delete_user_by_id
-from entity.schema.user_schema import UserOut, UserCreate, UserUpdate
-from exception.custom_exception import CustomErrorThrowException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
+
+from core.login_core import get_current_active_user
+from core.user_core import add_user_to_database
+from entity.database.mysql import User
+from entity.schema.request_schema import UserCreate
 from utils.base_response import BaseResponse
+
 user = APIRouter()
 
-
 @user.post("/add")
-async def create_user(user: UserCreate):
-    user_obj = await create_user_info(user.username, user.email)
-    return BaseResponse(code=200, msg="success", data=user_obj)
+async def add_user(data: UserCreate):
+    """
+    新增用户接口
 
+    接收用户创建请求数据，调用数据库操作函数新增用户，
+    并返回标准响应结果。
 
-@user.get("/info/{user_id}")
-async def get_user(user_id: int):
-    user = await get_user_by_id(user_id)
-    if not user:
-        raise CustomErrorThrowException(status_code=404, detail="User not found")
-    return BaseResponse(code=200, msg="success", data=user)
+    参数:
+        data (UserCreate): 用户创建请求体，包含新增用户所需字段
 
+    返回:
+        BaseResponse: 标准响应格式，code=200表示操作成功，data为空
+    """
+    await add_user_to_database(data)
+    return BaseResponse(code=200,msg="新增成功", data=None)
 
-@user.get("/all")
-async def list_users():
-    return BaseResponse(code=200, msg="success", data=await get_user_list())
-
-
-@user.put("/update/{user_id}")
-async def update_user(user_id: int, update: UserUpdate):
-    user = await update_user_info(user_id, **update.dict())
-    if not user:
-        raise CustomErrorThrowException(status_code=404, detail="User not found")
-    return BaseResponse(code=200, msg="success", data=user)
-
-
-@user.delete("/del/{user_id}")
-async def delete_user(user_id: int):
-    success = await delete_user_by_id(user_id)
-    if not success:
-        raise CustomErrorThrowException(status_code=404, detail="User not found")
-    return BaseResponse(code=200, msg="User deleted", data=None)
+@user.get("/test/{id}")
+async def read_users_me(
+        id:int,
+        current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    print(id)
+    return current_user.user_id

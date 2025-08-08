@@ -6,7 +6,7 @@ host = "localhost"
 port = 3306
 user = "root"
 password = "Zld19981016.."
-database = "test"
+database = "data_zhangldc"
 
 [milvus]
 host = "localhost"
@@ -23,5 +23,10 @@ api_key=""
 base_url="http://10.0.5.73:8000/v1"
 temperature=0.5
 max_token=4096
+
+[jwt]
+secret_key = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+algorithm = "HS256"
+access_token_expire_minutes = 30
 
 
