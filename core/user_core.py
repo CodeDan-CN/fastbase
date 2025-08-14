@@ -1,11 +1,10 @@
-import logging
+import logging as logger
 from typing import Optional, List
 
 from tortoise.exceptions import DoesNotExist
 from entity.database.mysql import User
 from entity.schema.user_schema import UserOut
 
-logger = logging.getLogger(__name__)
 
 
 async def create_user_info(username: str, email: str) -> UserOut:

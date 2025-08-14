@@ -3,6 +3,8 @@ from typing import Dict, Any
 
 from langchain.chat_models import init_chat_model
 from exception.custom_exception import CustomErrorThrowException
+from exception.error_codes import ErrorCode
+
 
 class LLMClient:
     """
@@ -64,7 +66,7 @@ class LLMClient:
         """
 
         if namespace not in cls._config_map:
-            raise CustomErrorThrowException(301, f"Namespace '{namespace}' not initialized")
+            raise CustomErrorThrowException(ErrorCode.LLM_INIT_NAMESPACE_ERROR)
 
         config = cls._config_map[namespace]
         model_name = config["model_name"]
@@ -100,7 +102,7 @@ class LLMClient:
             )
         else:
             logging.error(f"Unknown deployment type: {deployment_type}")
-            raise CustomErrorThrowException(302, "Unknown deployment type")
+            raise CustomErrorThrowException(ErrorCode.LLM_INIT_LOADER_ERROR)
 
         logging.info(f"LLMClient instance created for namespace: {namespace}")
         return client

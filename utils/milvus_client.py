@@ -1,8 +1,10 @@
 import logging
+import traceback
 from typing import Optional, Any, Dict, List
 
 from langchain_milvus import Milvus
 from exception.custom_exception import CustomErrorThrowException  # 自定义异常类（你原来已有）
+from exception.error_codes import ErrorCode
 
 
 class EmbeddingMilvusClient:
@@ -15,6 +17,7 @@ class EmbeddingMilvusClient:
     _port: int = 19530
     _index_params: Dict[str, Any] = {"index_type": "FLAT", "metric_type": "L2"}
     _db_name: str = "default"
+
 
     @classmethod
     def configure(cls, host: str, port: int, user: str = None, password: str = None, db_name: str = "default",
@@ -31,10 +34,12 @@ class EmbeddingMilvusClient:
         cls._host = host
         cls._port = port
         cls._db_name = db_name
-        cls.user = user,
-        cls.password = password,
+        cls.user = user
+        cls.password = password
         if index_params:
             cls._index_params = index_params
+        cls._uri = f"http://{cls._host}:{cls._port}"
+        cls._token = f"{cls.user}:{cls.password}"
 
         logging.info(f"Milvus client configured: host={host}, port={port}, db={db_name}")
 
@@ -59,29 +64,21 @@ class EmbeddingMilvusClient:
         try:
             db_name = db_name or cls._db_name
             logging.info(f"Creating Milvus collection: {collection_name} in db: {db_name}")
-            client = Milvus(
-                embedding_function=embedding_function,
-                collection_name=collection_name,
-                connection_args={
-                    "host": cls._host,
-                    "port": cls._port,
-                    "db_name": db_name,
-                    "user": cls.user,  # 新增字段
-                    "password": cls.password  # 新增字段
-                }
-            )
-            return client.from_documents(
+            return Milvus.from_documents(
                 documents=documents,
                 embedding=embedding_function,
                 collection_name=collection_name,
                 index_params=cls._index_params,
                 connection_args={
-                    "db_name": db_name
+                    "uri":cls._uri,
+                    "db_name": db_name,
+                    "user": cls.user,  # 新增字段
+                    "password": cls.password  # 新增字段
                 }
             )
         except Exception as e:
-            logging.exception("Failed to create Milvus collection from documents")
-            raise CustomErrorThrowException(501, f"Milvus from_documents error: {str(e)}")
+            logging.error("Failed to create Milvus collection from documents")
+            raise CustomErrorThrowException(ErrorCode.MILVUS_COLLECTION_CREATE_ERROR)
 
     @classmethod
     def similarity_search(cls,
@@ -113,18 +110,16 @@ class EmbeddingMilvusClient:
                 embedding_function=embedding_function,
                 collection_name=collection_name,
                 connection_args={
-                    "host": cls._host,
-                    "port": cls._port,
-                    "user": cls.user,  # 新增字段
-                    "password": cls.password,  # 新增字段
-                    "db_name": db_name
+                    "uri": cls._uri,
+                    "db_name": db_name,
+                    "token": cls._token
                 }
             )
-            logging.debug(f"Executing similarity_search on {collection_name} with query: {query}")
-            return client.similarity_search(query, k, expr, timeout)
+            logging.info(f"Executing similarity_search on {collection_name} with query: {query}")
+            return client.similarity_search(query=query, k=k, expr=expr, timeout=timeout)
         except Exception as e:
-            logging.exception("Milvus similarity_search failed")
-            raise CustomErrorThrowException(502, f"Milvus similarity_search error: {str(e)}")
+            logging.error(f"Milvus similarity_search failed，searon:{str(e)}")
+            raise CustomErrorThrowException(ErrorCode.MILVUS_SEARCH_SIMILARITY_FAILED)
 
     @classmethod
     def similarity_search_with_score(cls,
@@ -147,21 +142,20 @@ class EmbeddingMilvusClient:
                 embedding_function=embedding_function,
                 collection_name=collection_name,
                 connection_args={
-                    "host": cls._host,
-                    "port": cls._port,
-                    "user": cls.user,  # 新增字段
-                    "password": cls.password,  # 新增字段
-                    "db_name": db_name
+                    "uri": cls._uri,
+                    "db_name": db_name,
+                    "token": cls._token
                 }
             )
             logging.debug(f"Executing similarity_search_with_score on {collection_name}")
-            return client.similarity_search_with_score(query, k, expr, timeout)
+            return client.similarity_search_with_score(query=query, k=k, expr=expr, timeout=timeout)
         except Exception as e:
-            logging.exception("Milvus similarity_search_with_score failed")
-            raise CustomErrorThrowException(503, f"Milvus similarity_search_with_score error: {str(e)}")
+            logging.error(f"Milvus similarity_search_with_score failed,search:{traceback.format_exc()}")
+            raise CustomErrorThrowException(ErrorCode.MILVUS_SEARCH_WITH_SCOPE_FAILED)
 
     @classmethod
     def delete_documents(cls,
+                         embedding_function:Any,
                          collection_name: str,
                          ids: Optional[List[str]] = None,
                          expr: Optional[str] = None,
@@ -186,13 +180,11 @@ class EmbeddingMilvusClient:
             logging.info(
                 f"Deleting documents from collection: {collection_name}, db: {db_name}, ids: {ids}, expr: {expr}")
             client = Milvus(
-                embedding_function=None,
+                embedding_function=embedding_function,
                 connection_args={
-                    "host": cls._host,
-                    "port": cls._port,
-                    "user": cls.user,  # 新增字段
-                    "password": cls.password,  # 新增字段
-                    "db_name": db_name
+                    "uri": cls._uri,
+                    "db_name": db_name,
+                    "token": cls._token
                 },
                 collection_name=collection_name
             )
@@ -200,5 +192,5 @@ class EmbeddingMilvusClient:
             logging.info(f"Successfully deleted documents from collection: {collection_name}")
             return True
         except Exception as e:
-            logging.exception("Milvus delete_documents failed")
-            raise CustomErrorThrowException(504, f"Milvus delete_documents error: {str(e)}")
+            logging.error(f"Milvus delete_documents failed,search:{traceback.format_exc()}")
+            raise CustomErrorThrowException(ErrorCode.MILVUS_DELETE_DOCUMENT_FAILED)

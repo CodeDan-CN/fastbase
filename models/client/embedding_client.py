@@ -1,6 +1,7 @@
 import logging
 from typing import Literal, Optional, Dict
 
+from langchain_milvus.vectorstores.milvus import EmbeddingType
 from langchain_ollama import OllamaEmbeddings
 from langchain_huggingface import HuggingFaceEndpointEmbeddings,HuggingFaceEmbeddings
 

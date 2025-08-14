@@ -1,7 +1,6 @@
 import logging
 import os
 import traceback
-
 import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
@@ -10,11 +9,13 @@ from config.logging_config import init_daily_logger
 from config.setting import settings
 from exception.all_exception import global_exception_handlers
 from exception.custom_exception import CustomErrorThrowException
+from exception.error_codes import ErrorCode
 from models.client.embedding_client import EmbeddingClientFactory
 from utils.milvus_client import EmbeddingMilvusClient
 from models.client.llm_client import LLMClient
 from web.demo_web import demo
 from web.user_web import user
+
 
 def create_app():
     _app = FastAPI(
@@ -39,6 +40,7 @@ def create_app():
     register_tortoise(
         _app,
         db_url=f"mysql://{settings.mysql['user']}:{settings.mysql['password']}@{settings.mysql['host']}:{settings.mysql['port']}/{settings.mysql['database']}?charset=utf8mb4",
+        # db_url=f"mysql://root:#DC2025@10.3.70.252:13306/test?charset=utf8mb4",
         modules={'models': ['entity.database.mysql']},  # 改成你自己的模型路径
         # generate_schemas=True,  # 是否自动生成表结构（生产环境建议关闭）
         add_exception_handlers=True,
@@ -51,7 +53,7 @@ def create_app():
             init_daily_logger()
             logging.info("初始化大模型LLM")
             LLMClient.init({
-                "model": settings.llm_default["model"],
+                "model_name": settings.llm_default["model"],
                 "deployment_type": settings.llm_default["deployment_type"],
                 "temperature": settings.llm_default["temperature"],
                 "max_token": settings.llm_default["max_token"],
@@ -66,17 +68,17 @@ def create_app():
                 "db_name": settings.milvus["db_name"],
             })
             logging.info("初始化embedding模型")
-            EmbeddingClientFactory.init(**{
+            EmbeddingClientFactory.init(config={
                 "source": settings.embedding_model["source"],
                 "ollama_model": settings.embedding_model["ollama_model"],
                 "ollama_base_url": settings.embedding_model["ollama_base_url"],
                 "hf_model": settings.embedding_model["hf_model"],
-                "tei_endpoint": settings.embedding_model["tei_endpoint"],
+                "tei_endpoint": settings.embedding_model["tei_endpoint"]
             })
             logging.info("fastapi run------------------ Starting")
         except Exception:
             logging.error(f"startup 阶段初始化失败：{traceback.format_exc()}")
-            raise CustomErrorThrowException(101,f"startup 阶段初始化失败：{traceback.format_exc()}")
+            raise CustomErrorThrowException(ErrorCode.SYSTEM_INIT_ERROR)
 
     @_app.on_event("shutdown")
     async def shutdown_event():
@@ -89,4 +91,4 @@ def create_app():
 if __name__ == '__main__':
     # 初始化日志
     app = create_app()
-    uvicorn.run(app, host=os.environ.get('SERVER_HOST', '0.0.0.0'), port=int(os.environ.get('SERVER_PORT', 8003)))
+    uvicorn.run(app, host=settings.server["host"], port=int(settings.server["port"]))

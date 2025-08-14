@@ -1,28 +1,29 @@
 [server]
+host = "0.0.0.0"
 port = 6001
 
 [mysql]
-host = "localhost"
+host = "0.0.0.0"
 port = 3306
 user = "root"
-password = "Zld19981016.."
-database = "test"
+password = "" # 这里的%23是#号，直接输入#会影响url解析
+database = ""
 
 [milvus]
-host = "localhost"
+host = "0.0.0.0"
 port = 19530
 user = "root"
 password = ""
-db_name = "default"
+db_name = "fastbase"
 
 
 [llm-default]
 model = "qwen"
 deployment_type= "vllm"
 api_key=""
-base_url="http://10.0.5.73:8000/v1"
-temperature=0.5
-max_token=4096
+base_url="http://0.0.0.0:8000/v1"
+temperature=0.5 # 初始值，可在具体使用的时候进行修改
+max_token=4096 # 初始值，可在具体使用的时候进行修改
 
 
 [embedding-model]
